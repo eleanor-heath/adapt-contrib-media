@@ -7,6 +7,7 @@ define([
 ], function(Adapt, ComponentView, ComponentModel) {
 
   var froogaloopAdded = false;
+  var resolved = false;
 
   // The following function is used to to prevent a memory leak in Internet Explorer
   // See: http://javascript.crockford.com/memory/leak.html
@@ -194,16 +195,29 @@ define([
           modelOptions.hideVideoControlsOnLoad = true;
           modelOptions.features = [];
           if (froogaloopAdded) return callback();
-          $.getScript("assets/froogaloop.js")
-              .done(function() {
-                froogaloopAdded = true;
-                callback();
+
+          if(!resolved) {
+            $.when(
+              $.getScript( "assets/froogaloop.js" ),
+              $.Deferred(function(deferred){
+                $(deferred.resolve);
+                resolved = true;
               })
-              .fail(function() {
-                froogaloopAdded = false;
-                console.log('Could not load froogaloop.js');
-              });
+            ).done(function(){
+              froogaloopAdded = true;
+            }).then(function() {callback()}).fail(function() {
+              froogaloopAdded = false;
+              console.log('Could not load froogaloop.js');
+            });
+          } else {
+            setTimeout(
+              function()
+              {
+                callback();
+              }, 5000);
+          }
           break;
+
         default:
           callback();
       }
